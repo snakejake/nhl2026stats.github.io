@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 NHL Playoff Live Test</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0d10; color: #e0e0e0; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+        .refresh-tag { font-size: 0.8em; color: #00ff88; background: rgba(0, 255, 136, 0.1); padding: 4px 8px; border-radius: 4px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .game-card { background: #1c1f26; border: 1px solid #2d333b; border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
+        .live-pulse { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; background: #ff4b4b; border-radius: 50%; box-shadow: 0 0 8px #ff4b4b; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .team-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; }
+        .team-name { font-size: 1.2em; font-weight: 600; }
+        .score { font-size: 1.8em; font-weight: 800; color: #fff; }
+        .meta { font-size: 0.85em; color: #8b949e; border-top: 1px solid #2d333b; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; }
+        .error { color: #ff4b4b; background: rgba(255, 75, 75, 0.1); padding: 15px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🏒 2026 Playoff Tracker</h1>
+        <div id="status" class="refresh-tag">Syncing...</div>
+    </header>
+
+    <div id="scoreboard" class="grid">
+        </div>
+</div>
+
+<script>
+    // We use a CORS proxy to allow the browser to talk to the NHL API
+    const PROXY = "https://corsproxy.io/?";
+    const API_URL = "https://api-web.nhle.com/v1/score/now";
+
+    async function updateScores() {
+        const board = document.getElementById('scoreboard');
+        const status = document.getElementById('status');
+        
+        try {
+            const response = await fetch(PROXY + encodeURIComponent(API_URL));
+            if (!response.ok) throw new Error('API unreachable');
+            const data = await response.json();
+            
+            status.innerText = "Updated: " + new Date().toLocaleTimeString();
+            board.innerHTML = '';
+
+            if (!data.games || data.games.length === 0) {
+                board.innerHTML = "<p>No games scheduled for today.</p>";
+                return;
+            }
+
+            data.games.forEach(game => {
+                const isLive = game.gameState === "LIVE" || game.gameState === "CRIT";
+                const card = document.createElement('div');
+                card.className = 'game-card';
+                
+                card.innerHTML = `
+                    ${isLive ? '<div class="live-pulse"></div>' : ''}
+                    <div class="team-row">
+                        <span class="team-name">${game.awayTeam.abbrev}</span>
+                        <span class="score">${game.awayTeam.score ?? 0}</span>
+                    </div>
+                    <div class="team-row">
+                        <span class="team-name">${game.homeTeam.abbrev}</span>
+                        <span class="score">${game.homeTeam.score ?? 0}</span>
+                    </div>
+                    <div class="meta">
+                        <span>${game.gameState}</span>
+                        <span>${game.seriesStatusText || 'Round 1'}</span>
+                    </div>
+                `;
+                board.appendChild(card);
+            });
+        } catch (err) {
+            status.innerText = "Connection Error";
+            board.innerHTML = `<div class="error">Failed to fetch data: ${err.message}. Try refreshing in a moment.</div>`;
+        }
+    }
+
+    // Initial load
+    updateScores();
+    // Auto-refresh every 30 seconds
+    setInterval(updateScores, 30000);
+</script>
+
+</body>
+</html>
