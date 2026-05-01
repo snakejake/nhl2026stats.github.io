@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NHL 2026 Standings</title>
+    <style>
+        body { font-family: sans-serif; background: #0b0d10; color: #e0e0e0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
+        h1 { border-bottom: 1px solid #333; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #1c1f26; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #2d333b; }
+        th { background: #2d333b; color: #8b949e; font-size: 0.85em; text-transform: uppercase; }
+        .rank { width: 40px; color: #8b949e; }
+        .points { font-weight: bold; color: #fff; }
+        .logo { width: 24px; vertical-align: middle; margin-right: 10px; }
+        .error { color: #ff4b4b; padding: 20px; background: rgba(255, 75, 75, 0.1); border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🏆 2025-26 NHL Final Standings</h1>
+    <div id="standings-content">Loading standings...</div>
+</div>
+
+<script>
+    const PROXY = "https://corsproxy.io?";
+    const API_STANDINGS = "https://api-web.nhle.com/v1/standings/now";
+
+    async function getStandings() {
+        const content = document.getElementById('standings-content');
+        try {
+            const res = await fetch(PROXY + encodeURIComponent(API_STANDINGS));
+            const data = await res.json();
+            
+            let html = `<table>
+                <thead>
+                    <tr>
+                        <th class="rank">#</th>
+                        <th>Team</th>
+                        <th>GP</th>
+                        <th>W</th>
+                        <th>L</th>
+                        <th>OT</th>
+                        <th>PTS</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            // Sorting by points
+            const sortedTeams = data.standings.sort((a, b) => b.points - a.points);
+
+            sortedTeams.forEach((team, index) => {
+                html += `
+                    <tr>
+                        <td class="rank">${index + 1}</td>
+                        <td>
+                            <img class="logo" src="${team.teamLogo}">
+                            ${team.teamName.default}
+                        </td>
+                        <td>${team.gamesPlayed}</td>
+                        <td>${team.wins}</td>
+                        <td>${team.losses}</td>
+                        <td>${team.otLosses}</td>
+                        <td class="points">${team.points}</td>
+                    </tr>`;
+            });
+
+            html += `</tbody></table>`;
+            content.innerHTML = html;
+        } catch (err) {
+            content.innerHTML = `<div class="error">Failed to load standings. Error: ${err.message}</div>`;
+        }
+    }
+
+    getStandings();
+</script>
+
+</body>
+</html>
